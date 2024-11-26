@@ -1,17 +1,55 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"runtime"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"go.opentelemetry.io/otel/exporters/prometheus"
+	api "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
+const meterName = "github.com/rotscher/autoscaling/autoscaling"
+
 func main() {
+	ctx := context.Background()
+	exporter, err := prometheus.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter(meterName)
+
+	// Start the prometheus HTTP server and pass the exporter Collector to it
+	//go serveMetrics()
+
+	queueCount, err := meter.Int64UpDownCounter("queue_current_count", api.WithDescription("a simple counter"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	http.HandleFunc("/", getRoot)
 	http.HandleFunc("/cpu", getCPU)
 	http.HandleFunc("/memory", getMemory)
+	http.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
+		queueCount.Add(ctx, 1)
+	})
+
+	http.HandleFunc("/remove", func(w http.ResponseWriter, r *http.Request) {
+		queueCount.Add(ctx, -1)
+	})
+
+	http.HandleFunc("/metrics", promhttp.Handler().ServeHTTP)
 
 	_ = http.ListenAndServe(":3333", nil)
 }
