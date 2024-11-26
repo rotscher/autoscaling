@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: autoscaling
+  name: autoscaling
+  #annotations:
+  #  prometheus.io/scrape: 'true'
+  #  prometheus.io/port: '8080'
+
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 3333
+  selector:
+    app: autoscaling
+  type: ClusterIP
