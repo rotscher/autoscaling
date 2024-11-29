@@ -12,7 +12,7 @@ metadata:
   namespace: monitoring
 rules:
 - apiGroups:
-  - metrics.k8s.io
+  - custom.metrics.k8s.io
   resources:
   - pods
   - nodes
