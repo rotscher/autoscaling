@@ -92,5 +92,6 @@ Execute `curl http://autoscaling.test/add` to increase the metric and `curl http
 
 ## References
 
-https://github.com/kubernetes-sigs/prometheus-adapter/blob/master/docs/walkthrough.md
-https://github.com/kubernetes-sigs/prometheus-adapter/blob/master/docs/config-walkthrough.md
+* https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+* https://github.com/kubernetes-sigs/prometheus-adapter/blob/master/docs/walkthrough.md
+* https://github.com/kubernetes-sigs/prometheus-adapter/blob/master/docs/config-walkthrough.md
