@@ -17,8 +17,17 @@ import (
 )
 
 const meterName = "github.com/rotscher/autoscaling/autoscaling"
+const coresCount = 1
+const percentage = 50
+const timeSeconds = 600
+
+type queue struct {
+	count int64
+}
 
 func main() {
+
+	fmt.Printf("Starting autoscaling demo app with following params: coresCount=%d, percentage=%d, timeSecondes=%d", coresCount, percentage, timeSeconds)
 	ctx := context.Background()
 	exporter, err := prometheus.New()
 	if err != nil {
@@ -27,26 +36,27 @@ func main() {
 	provider := metric.NewMeterProvider(metric.WithReader(exporter))
 	meter := provider.Meter(meterName)
 
-	// Start the prometheus HTTP server and pass the exporter Collector to it
-	//go serveMetrics()
+	queue := queue{count: 0}
+	queueCount, err := meter.Int64Gauge("queue_current_count", api.WithDescription("a simple counter"))
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	queueCount, err := meter.Int64UpDownCounter("queue_current_count", api.WithDescription("a simple counter"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
+	//init the metric
+	queueCount.Record(ctx, queue.count)
 
 	http.HandleFunc("/", getRoot)
 	http.HandleFunc("/cpu", getCPU)
-	http.HandleFunc("/memory", getMemory)
 	http.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
-		queueCount.Add(ctx, 1)
+		queue.count = queue.count + 1
+		queueCount.Record(ctx, queue.count)
 	})
 
 	http.HandleFunc("/remove", func(w http.ResponseWriter, r *http.Request) {
-		queueCount.Add(ctx, -1)
+		if queue.count > 0 {
+			queue.count = queue.count - 1
+			queueCount.Record(ctx, queue.count)
+		}
 	})
 
 	http.HandleFunc("/metrics", promhttp.Handler().ServeHTTP)
@@ -60,11 +70,9 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
 }
 func getCPU(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("got /cpu request\n")
-	_, _ = io.WriteString(w, "this generates some cpu load!\n")
+	_, _ = io.WriteString(w,
+		fmt.Sprintf("this generates some cpu load: coresCount=%d, percentage=%d, timeSecondes=%d\n", coresCount, percentage, timeSeconds))
 
-	coresCount := 1
-	percentage := 50
-	timeSeconds := 120
 	mainBegin := time.Now()
 	runtime.GOMAXPROCS(coresCount)
 
@@ -101,9 +109,4 @@ func getCPU(w http.ResponseWriter, r *http.Request) {
 		}(i)
 		time.Sleep(time.Duration(1) * time.Second)
 	}
-}
-
-func getMemory(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("got /memory request\n")
-	_, _ = io.WriteString(w, "this should use some memory!\n")
 }

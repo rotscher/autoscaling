@@ -13,9 +13,9 @@ spec:
     metadata:
       labels:
         app: autoscaling
-#      annotations:
-#        prometheus.io/scrape: 'true'
-#        prometheus.io/port: '8080'
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '3333'
     spec:
       containers:
         - image: autoscaling:latest
