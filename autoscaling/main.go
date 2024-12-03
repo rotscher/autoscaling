@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
 	"time"
 
@@ -25,7 +26,23 @@ type queue struct {
 	count int64
 }
 
+type basicAuth struct {
+	user     string
+	password string
+	enabled  bool
+}
+
 func main() {
+
+	user := os.Getenv("USER")
+	password := os.Getenv("PASSWORD")
+	auth := basicAuth{enabled: false}
+
+	if len(user) > 0 && len(password) > 0 {
+		auth.user = user
+		auth.password = password
+		auth.enabled = true
+	}
 
 	fmt.Printf("Starting autoscaling demo app with following params: coresCount=%d, percentage=%d, timeSecondes=%d", coresCount, percentage, timeSeconds)
 	ctx := context.Background()
@@ -46,7 +63,20 @@ func main() {
 	queueCount.Record(ctx, queue.count)
 
 	http.HandleFunc("/", getRoot)
-	http.HandleFunc("/cpu", getCPU)
+	http.HandleFunc("/cpu", func(w http.ResponseWriter, r *http.Request) {
+		if auth.enabled == true {
+			username, p, ok := r.BasicAuth()
+			if !ok || username != auth.user || p != auth.password {
+				w.WriteHeader(401)
+				return
+			}
+		}
+
+		_, _ = io.WriteString(w,
+			fmt.Sprintf("this generates some cpu load: coresCount=%d, percentage=%d, timeSecondes=%d\n", coresCount, percentage, timeSeconds))
+		fmt.Printf("got /cpu request\n")
+		runCpu()
+	})
 	http.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
 		queue.count = queue.count + 1
 		queueCount.Record(ctx, queue.count)
@@ -68,10 +98,7 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("got / request\n")
 	_, _ = io.WriteString(w, "This is my website!\n")
 }
-func getCPU(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("got /cpu request\n")
-	_, _ = io.WriteString(w,
-		fmt.Sprintf("this generates some cpu load: coresCount=%d, percentage=%d, timeSecondes=%d\n", coresCount, percentage, timeSeconds))
+func runCpu() {
 
 	mainBegin := time.Now()
 	runtime.GOMAXPROCS(coresCount)

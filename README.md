@@ -52,6 +52,21 @@ kubectl create -f deployments/autoscaling/
 kubectl rollout restart deployment.apps/autoscaling
 ```
 
+### Security
+
+The `cpu` endpoint can be protected with basic auth which is simply enabled with two environment variables:
+
+```
+export USER=username
+export PASSWORD=your secret
+```
+
+A client must call the protected endpoint with an `Authorization` header, e.g.:
+
+```
+curl -H "Authorization: Basic $(echo -n $USER:$PASSWORD | base64)" http://localhost:3333/cpu
+```
+
 ## Deploy Prometheus Adapter
 ```
 kubectl create namespace monitoring
