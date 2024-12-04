@@ -19,7 +19,7 @@ import (
 
 const meterName = "github.com/rotscher/autoscaling/autoscaling"
 const coresCount = 1
-const percentage = 50
+const percentage = 20
 const timeSeconds = 600
 
 type queue struct {
